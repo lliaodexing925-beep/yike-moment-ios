@@ -1,0 +1,14 @@
+{
+  "appId": "com.yike.moment",
+  "appName": "一刻",
+  "webDir": "public",
+  "backgroundColor": "#050617",
+  "ios": { "contentInset": "never" },
+  "server": {
+    "allowNavigation": [
+      "ok.kimi.link", "*.ok.kimi.link",
+      "kimi.com", "*.kimi.com",
+      "kimi.moonshot.cn", "*.kimi.moonshot.cn"
+    ]
+  }
+}
