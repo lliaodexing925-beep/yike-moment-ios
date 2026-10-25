@@ -1,0 +1,18 @@
+{
+  "name": "yike-moment-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "一刻 iOS unsigned IPA cloud build",
+  "scripts": {
+    "copy:ios": "cap copy ios",
+    "sync:ios": "cap sync ios",
+    "open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "7.6.9",
+    "@capacitor/ios": "7.6.9"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.6.9"
+  }
+}
