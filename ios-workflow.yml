@@ -1,0 +1,77 @@
+name: Build unsigned iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install project dependencies
+        run: npm install
+      - name: Generate native iOS project
+        run: npx cap add ios
+      - name: Install image generator dependency
+        run: python3 -m pip install --user Pillow
+      - name: Generate app icon and launch images
+        run: python3 scripts/generate_assets.py
+      - name: Synchronize Capacitor iOS project
+        run: npx cap sync ios
+      - name: Build unsigned iOS app
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            clean build
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP_PATH"
+          test -x "$APP_PATH/App"
+          test ! -e "$APP_PATH/embedded.mobileprovision"
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/App.app
+          (cd build && zip -qry yike-moment-unsigned.ipa Payload)
+          unzip -t build/yike-moment-unsigned.ipa
+          shasum -a 256 build/yike-moment-unsigned.ipa > build/yike-moment-unsigned.sha256
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yike-moment-unsigned
+          path: |
+            build/yike-moment-unsigned.ipa
+            build/yike-moment-unsigned.sha256
+          retention-days: 14
+      - name: Publish downloadable release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "ios-build-${{ github.run_number }}" \
+            build/yike-moment-unsigned.ipa \
+            build/yike-moment-unsigned.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "一刻 iOS 未签名构建 ${{ github.run_number }}" \
+            --notes "未签名 IPA，需要在 iPad 上自行签名。提交：${{ github.sha }}。首次启动后填写已经发布的「一刻」公开网址。"
